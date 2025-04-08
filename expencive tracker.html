@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Expense Tracker PRO</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, #74ebd5, #acb6e5);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 500px;
+      background: white;
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    }
+
+    h2 {
+      text-align: center;
+      color: #2d3436;
+      margin-bottom: 20px;
+    }
+
+    .balance {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .balance h3 {
+      font-size: 16px;
+      color: #636e72;
+    }
+
+    .balance h1 {
+      font-size: 32px;
+      color: #0984e3;
+    }
+
+    .summary {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .summary div {
+      width: 48%;
+      background: linear-gradient(135deg, #55efc4, #00b894);
+      color: white;
+      padding: 15px 10px;
+      text-align: center;
+      border-radius: 10px;
+    }
+
+    .summary div:last-child {
+      background: linear-gradient(135deg, #ff7675, #d63031);
+    }
+
+    form input, form select, form button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 12px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: none;
+      outline: none;
+    }
+
+    form input, form select {
+      background-color: #f1f2f6;
+    }
+
+    form button {
+      background-color: #6c5ce7;
+      color: white;
+      font-weight: bold;
+      transition: 0.3s ease;
+      cursor: pointer;
+    }
+
+    form button:hover {
+      background-color: #a29bfe;
+    }
+
+    .filters {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 15px;
+    }
+
+    .filters button {
+      padding: 8px 15px;
+      border: none;
+      border-radius: 5px;
+      background-color: #dfe6e9;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .filters button.active {
+      background-color: #6c5ce7;
+      color: white;
+    }
+
+    ul {
+      list-style-type: none;
+      max-height: 200px;
+      overflow-y: auto;
+      margin-top: 20px;
+    }
+
+    ul li {
+      background: #dfe6e9;
+      padding: 10px;
+      margin-top: 10px;
+      display: flex;
+      justify-content: space-between;
+      border-right: 8px solid #00b894;
+      border-radius: 10px;
+      flex-direction: column;
+    }
+
+    ul li.expense {
+      border-right-color: #d63031;
+    }
+
+    ul li span {
+      font-size: 14px;
+      color: #555;
+    }
+
+    ul li .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    ul li button {
+      background: red;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 3px 8px;
+      cursor: pointer;
+      margin-left: 10px;
+    }
+
+    .clear-btn {
+      width: 100%;
+      background: #d63031;
+      margin-top: 10px;
+    }
+
+    .clear-btn:hover {
+      background: #ff7675;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>💰 Expense Tracker PRO</h2>
+
+    <div class="balance">
+      <h3>Your Balance</h3>
+      <h1 id="balance">₹0.00</h1>
+    </div>
+
+    <div class="summary">
+      <div>
+        <h4>Income</h4>
+        <p id="income">₹0.00</p>
+      </div>
+      <div>
+        <h4>Expense</h4>
+        <p id="expense">₹0.00</p>
+      </div>
+    </div>
+
+    <form id="form">
+      <input type="text" id="desc" placeholder="Description" required>
+      <input type="number" id="amount" placeholder="Amount (e.g. 100 / -50)" required>
+      <input type="date" id="date" required>
+      <select id="type" required>
+        <option value="">-- Select Type --</option>
+        <option value="income">Income</option>
+        <option value="expense">Expense</option>
+      </select>
+      <button type="submit">Add Transaction</button>
+    </form>
+
+    <div class="filters">
+      <button onclick="filterList('all')" class="active">All</button>
+      <button onclick="filterList('income')">Income</button>
+      <button onclick="filterList('expense')">Expense</button>
+    </div>
+
+    <ul id="list"></ul>
+
+    <button class="clear-btn" onclick="clearAll()">🗑 Clear All</button>
+  </div>
+
+  <script>
+    const list = document.getElementById('list');
+    const balance = document.getElementById('balance');
+    const income = document.getElementById('income');
+    const expense = document.getElementById('expense');
+    const form = document.getElementById('form');
+
+    let transactions = JSON.parse(localStorage.getItem('transactions')) || [];
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      const desc = document.getElementById('desc').value;
+      const amount = parseFloat(document.getElementById('amount').value);
+      const date = document.getElementById('date').value;
+      const type = document.getElementById('type').value;
+
+      if (!desc || !amount || !date || !type) return alert("Please fill all fields!");
+
+      const newTxn = {
+        id: Date.now(),
+        desc,
+        amount,
+        date,
+        type
+      };
+
+      transactions.push(newTxn);
+      save();
+      form.reset();
+    });
+
+    function deleteTxn(id) {
+      transactions = transactions.filter(txn => txn.id !== id);
+      save();
+    }
+
+    function clearAll() {
+      if (confirm("Are you sure you want to clear all transactions?")) {
+        transactions = [];
+        save();
+      }
+    }
+
+    function filterList(type) {
+      document.querySelectorAll('.filters button').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+
+      render(type);
+    }
+
+    function save() {
+      localStorage.setItem('transactions', JSON.stringify(transactions));
+      render();
+    }
+
+    function render(filterType = 'all') {
+      list.innerHTML = '';
+      let total = 0, incomeTotal = 0, expenseTotal = 0;
+
+      let filtered = transactions;
+      if (filterType !== 'all') {
+        filtered = transactions.filter(txn => txn.type === filterType);
+      }
+
+      filtered.forEach(txn => {
+        const li = document.createElement('li');
+        li.classList.add(txn.type === 'expense' ? 'expense' : 'income');
+
+        li.innerHTML = `
+          <div class="row">
+            <strong>${txn.desc}</strong>
+            <div>
+              ₹${txn.amount}
+              <button onclick="deleteTxn(${txn.id})">x</button>
+            </div>
+          </div>
+          <span>${txn.date} - ${txn.type.toUpperCase()}</span>
+        `;
+        list.appendChild(li);
+
+        total += txn.type === 'income' ? txn.amount : -txn.amount;
+        if (txn.type === 'income') incomeTotal += txn.amount;
+        else expenseTotal += txn.amount;
+      });
+
+      balance.innerText = `₹${total.toFixed(2)}`;
+      income.innerText = `₹${incomeTotal.toFixed(2)}`;
+      expense.innerText = `₹${Math.abs(expenseTotal).toFixed(2)}`;
+    }
+
+    render();
+  </script>
+</body>
+</html>
